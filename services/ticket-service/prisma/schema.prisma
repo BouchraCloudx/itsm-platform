@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Ticket {
+  id                     String         @id @default(uuid())
+  title                  String
+  description            String
+  status                 TicketStatus   @default(OPEN)
+  priority               TicketPriority
+  category               String
+  createdBy              String         @map("created_by")
+  assignedTo             String?        @map("assigned_to")
+  slaDeadline            DateTime?      @map("sla_deadline")
+  resolutionTimeMinutes  Int?           @map("resolution_time_minutes")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+
+  comments    Comment[]
+  attachments Attachment[]
+
+  @@map("tickets")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  ticketId  String   @map("ticket_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  ticketId   String   @map("ticket_id")
+  fileUrl    String   @map("file_url")
+  fileName   String   @map("file_name")
+  uploadedBy String   @map("uploaded_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
