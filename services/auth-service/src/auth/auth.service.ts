@@ -50,7 +50,12 @@ export class AuthService {
 
     return this.generateTokenResponse(user.id, user.email, user.role);
   }
-
+  async findTechnicians() {
+    return this.prisma.user.findMany({
+      where: { role: 'TECHNICIAN', isActive: true },
+      select: { id: true, email: true },
+    });
+  }
   private generateTokenResponse(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
 

@@ -1,0 +1,137 @@
+services:
+
+  # ---------- BASES DE DONNÉES ----------
+  postgres-auth:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-ticket:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ticket_user
+      POSTGRES_PASSWORD: ticket_pass
+      POSTGRES_DB: ticket_db
+    volumes:
+      - ticket-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticket_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-user:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: user_user
+      POSTGRES_PASSWORD: user_pass
+      POSTGRES_DB: user_db
+    volumes:
+      - user-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-notification:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: notif_user
+      POSTGRES_PASSWORD: notif_pass
+      POSTGRES_DB: notification_db
+    volumes:
+      - notification-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notif_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------- MICROSERVICES ----------
+  auth-service:
+    build: ./services/auth-service
+    environment:
+      DATABASE_URL: "postgresql://auth_user:auth_pass@postgres-auth:5432/auth_db?schema=public"
+      JWT_SECRET: "change-moi-en-production-avec-une-vraie-cle-secrete"
+      JWT_EXPIRES_IN: "1h"
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && node dist/main"
+
+  ticket-service:
+    build: ./services/ticket-service
+    environment:
+      DATABASE_URL: "postgresql://ticket_user:ticket_pass@postgres-ticket:5432/ticket_db?schema=public"
+      JWT_SECRET: "change-moi-en-production-avec-une-vraie-cle-secrete"
+      PORT: 3002
+      NOTIFICATION_SERVICE_URL: "http://notification-service:3004"
+      AUTH_SERVICE_URL: "http://auth-service:3001"
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres-ticket:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && node dist/main"
+
+  user-service:
+    build: ./services/user-service
+    environment:
+      DATABASE_URL: "postgresql://user_user:user_pass@postgres-user:5432/user_db?schema=public"
+      JWT_SECRET: "change-moi-en-production-avec-une-vraie-cle-secrete"
+      PORT: 3003
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && node dist/main"
+
+  notification-service:
+    build: ./services/notification-service
+    environment:
+      DATABASE_URL: "postgresql://notif_user:notif_pass@postgres-notification:5432/notification_db?schema=public"
+      JWT_SECRET: "change-moi-en-production-avec-une-vraie-cle-secrete"
+      PORT: 3004
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres-notification:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && node dist/main"
+
+  # ---------- FRONTEND ----------
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_AUTH_URL: "http://localhost:3001"
+        VITE_TICKET_URL: "http://localhost:3002"
+        VITE_USER_URL: "http://localhost:3003"
+        VITE_NOTIFICATION_URL: "http://localhost:3004"
+    ports:
+      - "5173:80"
+    depends_on:
+      - auth-service
+      - ticket-service
+      - user-service
+      - notification-service
+
+volumes:
+  auth-data:
+  ticket-data:
+  user-data:
+  notification-data:
