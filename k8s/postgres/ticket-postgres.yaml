@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ticket-postgres-pvc
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticket-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ticket-postgres
+  template:
+    metadata:
+      labels:
+        app: ticket-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: ticket_user
+            - name: POSTGRES_PASSWORD
+              value: ticket_pass
+            - name: POSTGRES_DB
+              value: ticket_db
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ticket-postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticket-postgres
+spec:
+  selector:
+    app: ticket-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
