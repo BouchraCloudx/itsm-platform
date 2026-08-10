@@ -11,9 +11,6 @@ on:
     paths:
       - 'services/auth-service/**'
 
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/itsm-auth-service
-
 jobs:
   build-test-scan-push:
     runs-on: ubuntu-latest
@@ -28,6 +25,9 @@ jobs:
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
+
+      - name: Définir le nom de l'image en minuscules
+        run: echo "IMAGE_NAME=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/itsm-auth-service" >> $GITHUB_ENV
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
