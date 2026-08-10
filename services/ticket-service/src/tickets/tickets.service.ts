@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,7 +30,12 @@ export class TicketsService {
     });
 
     await this.autoAssign(ticket.id);
-    await this.notifyUser(userId, 'TICKET_CREATED', `Votre ticket "${ticket.title}" a été créé`, ticket.id);
+    await this.notifyUser(
+      userId,
+      'TICKET_CREATED',
+      `Votre ticket "${ticket.title}" a été créé`,
+      ticket.id,
+    );
 
     return this.prisma.ticket.findUnique({ where: { id: ticket.id } });
   }
@@ -105,12 +114,14 @@ export class TicketsService {
   private async autoAssign(ticketId: string) {
     try {
       const authUrl = this.configService.get<string>('AUTH_SERVICE_URL');
-      const { data: technicians } = await axios.get<{ id: string; email: string }[]>(
-        `${authUrl}/auth/internal/technicians`,
-      );
+      const { data: technicians } = await axios.get<
+        { id: string; email: string }[]
+      >(`${authUrl}/auth/internal/technicians`);
 
       if (!technicians || technicians.length === 0) {
-        console.warn('Aucun technicien disponible pour l affectation automatique');
+        console.warn(
+          'Aucun technicien disponible pour l affectation automatique',
+        );
         return;
       }
 
@@ -140,9 +151,16 @@ export class TicketsService {
     }
   }
 
-  private async notifyUser(userId: string, type: string, message: string, relatedTicketId: string) {
+  private async notifyUser(
+    userId: string,
+    type: string,
+    message: string,
+    relatedTicketId: string,
+  ) {
     try {
-      const notificationUrl = this.configService.get<string>('NOTIFICATION_SERVICE_URL');
+      const notificationUrl = this.configService.get<string>(
+        'NOTIFICATION_SERVICE_URL',
+      );
       await axios.post(`${notificationUrl}/notifications`, {
         userId,
         type,

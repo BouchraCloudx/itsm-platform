@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -9,7 +13,9 @@ export class ProfilesService {
   constructor(private prisma: PrismaService) {}
 
   async createMyProfile(authUserId: string, dto: CreateProfileDto) {
-    const existing = await this.prisma.profile.findUnique({ where: { authUserId } });
+    const existing = await this.prisma.profile.findUnique({
+      where: { authUserId },
+    });
     if (existing) {
       throw new ConflictException('Le profil existe déjà pour cet utilisateur');
     }
@@ -51,7 +57,9 @@ export class ProfilesService {
   }
 
   async assignTeam(profileId: string, dto: AssignTeamDto) {
-    const profile = await this.prisma.profile.findUnique({ where: { id: profileId } });
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+    });
     if (!profile) {
       throw new NotFoundException('Profil introuvable');
     }

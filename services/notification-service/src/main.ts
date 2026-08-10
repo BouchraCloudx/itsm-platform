@@ -7,6 +7,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors();
   await app.listen(process.env.PORT ?? 3004);
-  console.log(`Notification service running on port ${process.env.PORT ?? 3004}`);
+  console.log(
+    `Notification service running on port ${process.env.PORT ?? 3004}`,
+  );
 }
 bootstrap();
