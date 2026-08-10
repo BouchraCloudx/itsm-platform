@@ -5,11 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    PrismaModule,
-    AuthModule,
-  ],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthModule],
   controllers: [HealthController],
 })
 export class AppModule {}
