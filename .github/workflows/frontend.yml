@@ -1,0 +1,87 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/itsm-frontend
+
+jobs:
+  build-scan-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Login GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image Docker
+        uses: docker/build-push-action@v5
+        with:
+          context: frontend
+          push: false
+          load: true
+          build-args: |
+            VITE_AUTH_URL=http://localhost:8080/api
+            VITE_TICKET_URL=http://localhost:8080/api
+            VITE_USER_URL=http://localhost:8080/api
+            VITE_NOTIFICATION_URL=http://localhost:8080/api
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Scan de vulnérabilités (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Push image vers GHCR
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: frontend
+          push: true
+          build-args: |
+            VITE_AUTH_URL=http://localhost:8080/api
+            VITE_TICKET_URL=http://localhost:8080/api
+            VITE_USER_URL=http://localhost:8080/api
+            VITE_NOTIFICATION_URL=http://localhost:8080/api
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
