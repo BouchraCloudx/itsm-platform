@@ -1,0 +1,17 @@
+replicaCount: 2
+
+image:
+  repository: itsm-platform-frontend
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 32Mi
+  limits:
+    cpu: 150m
+    memory: 128Mi

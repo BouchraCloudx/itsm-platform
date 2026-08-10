@@ -1,0 +1,28 @@
+replicaCount: 2
+
+image:
+  repository: itsm-platform-notification-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3004
+
+env:
+  PORT: "3004"
+  DATABASE_URL: "postgresql://notif_user:notif_pass@notification-postgres:5432/notification_db?schema=public"
+
+jwtSecretName: jwt-secret
+jwtSecretKey: JWT_SECRET
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+healthCheck:
+  path: /health
+  port: 3004

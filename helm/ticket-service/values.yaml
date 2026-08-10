@@ -1,0 +1,30 @@
+replicaCount: 2
+
+image:
+  repository: itsm-platform-ticket-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3002
+
+env:
+  PORT: "3002"
+  DATABASE_URL: "postgresql://ticket_user:ticket_pass@ticket-postgres:5432/ticket_db?schema=public"
+  NOTIFICATION_SERVICE_URL: "http://notification-service:3004"
+  AUTH_SERVICE_URL: "http://auth-service:3001"
+
+jwtSecretName: jwt-secret
+jwtSecretKey: JWT_SECRET
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+healthCheck:
+  path: /health
+  port: 3002
