@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
@@ -14,9 +15,10 @@ import { AddCommentDto } from './dto/add-comment.dto';
 @Injectable()
 export class TicketsService {
   constructor(
-    private prisma: PrismaService,
-    private configService: ConfigService,
-  ) {}
+  private prisma: PrismaService,
+  private configService: ConfigService,
+  private rabbitmq: RabbitmqService,
+) {}
 
   async create(dto: CreateTicketDto, userId: string) {
     const ticket = await this.prisma.ticket.create({
@@ -73,19 +75,28 @@ export class TicketsService {
   }
 
   async updateStatus(id: string, dto: UpdateTicketStatusDto) {
-    const ticket = await this.findTicketOrThrow(id);
+  const ticket = await this.findTicketOrThrow(id);
 
-    const data: any = { status: dto.status };
+  const data: any = { status: dto.status };
 
-    if (dto.status === 'RESOLVED' || dto.status === 'CLOSED') {
-      const resolutionMinutes = Math.round(
-        (Date.now() - ticket.createdAt.getTime()) / 60000,
-      );
-      data.resolutionTimeMinutes = resolutionMinutes;
-    }
-
-    return this.prisma.ticket.update({ where: { id }, data });
+  if (dto.status === 'RESOLVED' || dto.status === 'CLOSED') {
+    const resolutionMinutes = Math.round(
+      (Date.now() - ticket.createdAt.getTime()) / 60000,
+    );
+    data.resolutionTimeMinutes = resolutionMinutes;
   }
+
+  const updated = await this.prisma.ticket.update({ where: { id }, data });
+
+  await this.rabbitmq.publish('ticket.status_changed', {
+    userId: ticket.createdBy,
+    type: 'TICKET_STATUS_CHANGED',
+    message: `Le statut de votre ticket "${ticket.title}" est passé à ${dto.status}`,
+    relatedTicketId: id,
+  });
+
+  return updated;
+}
 
   // Réassignation MANUELLE (déclenchée par un Admin/Technicien depuis le frontend)
   async assign(id: string, dto: AssignTicketDto) {
@@ -151,26 +162,14 @@ export class TicketsService {
     }
   }
 
-  private async notifyUser(
-    userId: string,
-    type: string,
-    message: string,
-    relatedTicketId: string,
-  ) {
-    try {
-      const notificationUrl = this.configService.get<string>(
-        'NOTIFICATION_SERVICE_URL',
-      );
-      await axios.post(`${notificationUrl}/notifications`, {
-        userId,
-        type,
-        message,
-        relatedTicketId,
-      });
-    } catch (error) {
-      console.error('Échec de l envoi de la notification:', error.message);
-    }
-  }
+  private async notifyUser(userId: string, type: string, message: string, relatedTicketId: string) {
+  await this.rabbitmq.publish('ticket.created', {
+    userId,
+    type,
+    message,
+    relatedTicketId,
+  });
+}
 
   private async findTicketOrThrow(id: string) {
     const ticket = await this.prisma.ticket.findUnique({ where: { id } });
