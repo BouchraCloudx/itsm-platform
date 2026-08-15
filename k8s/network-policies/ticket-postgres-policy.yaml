@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ticket-postgres-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: ticket-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: ticket-service
+      ports:
+        - protocol: TCP
+          port: 5432

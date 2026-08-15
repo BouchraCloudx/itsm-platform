@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ .Chart.Name }}-success-rate
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: pod-ready-rate
+      interval: 15s
+      count: 3
+      successCondition: result[0] >= 0.9
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(kube_pod_status_ready{namespace="itsm", condition="true"} * on(pod) group_left(label_app) kube_pod_labels{label_app="{{ "{{" }}args.service-name{{ "}}" }}"})
+            /
+            count(kube_pod_labels{label_app="{{ "{{" }}args.service-name{{ "}}" }}", namespace="itsm"})

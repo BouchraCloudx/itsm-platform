@@ -1,13 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 
 @Controller('health')
 export class HealthController {
   @Get()
   check() {
-    return {
-      status: 'ok',
-      service: 'auth-service',
-      timestamp: new Date().toISOString(),
-    };
+    throw new HttpException('Simulated failure for rollback test', HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }

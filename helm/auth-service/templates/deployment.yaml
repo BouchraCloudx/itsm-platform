@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ .Chart.Name }}
   labels:
@@ -9,6 +9,21 @@ spec:
   selector:
     matchLabels:
       app: {{ .Chart.Name }}
+  strategy:
+    canary:
+      analysis:
+        templates:
+          - templateName: {{ .Chart.Name }}-success-rate
+        args:
+          - name: service-name
+            value: {{ .Chart.Name }}
+        startingStep: 1
+      steps:
+        - setWeight: 20
+        - pause: { duration: 30s }
+        - setWeight: 50
+        - pause: { duration: 30s }
+        - setWeight: 100
   template:
     metadata:
       labels:
@@ -45,3 +60,5 @@ spec:
               port: {{ .Values.healthCheck.port }}
             initialDelaySeconds: 15
             periodSeconds: 20
+EOF
+
