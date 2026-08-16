@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ticketApi, authApi } from '../api/client';
+import { ticketApi, authApi, fileApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import Badge from '../components/Badge';
 import type { Ticket } from '../types';
@@ -18,6 +18,7 @@ export default function TicketDetailPage() {
   const [selectedTech, setSelectedTech] = useState('');
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const canManage = user?.role === 'TECHNICIAN' || user?.role === 'ADMIN';
 
   useEffect(() => {
@@ -61,6 +62,27 @@ export default function TicketDetailPage() {
     loadTicket();
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('ticketId', id);
+
+    try {
+      await fileApi.post('/files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      loadTicket();
+    } catch (err) {
+      console.error('Erreur upload:', err);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   if (loading) return <div className="p-8 text-slate-500">Chargement...</div>;
   if (!ticket) return <div className="p-8 text-slate-500">Ticket introuvable</div>;
 
@@ -88,6 +110,21 @@ export default function TicketDetailPage() {
         </div>
 
         <p className="text-slate-700 whitespace-pre-wrap">{ticket.description}</p>
+
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <label className="block text-sm font-medium text-slate-700 mb-2">Pièces jointes</label>
+          {ticket.attachments && ticket.attachments.length > 0 && (
+            <ul className="mb-3 space-y-1">
+              {ticket.attachments.map((att: any) => (
+                <li key={att.id} className="text-sm text-blue-600">
+                  📎 {att.fileName}
+                </li>
+              ))}
+            </ul>
+          )}
+          <input type="file" onChange={handleFileUpload} disabled={uploading} className="text-sm" />
+          {uploading && <p className="text-xs text-slate-400 mt-1">Envoi en cours...</p>}
+        </div>
 
         {canManage && (
           <div className="mt-6 pt-4 border-t border-slate-100 space-y-4">

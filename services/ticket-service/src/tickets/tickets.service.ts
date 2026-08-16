@@ -1,24 +1,20 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
+import { RabbitmqService } from '../rabbitmq/rabbitmq.service';
 
 @Injectable()
 export class TicketsService {
   constructor(
-  private prisma: PrismaService,
-  private configService: ConfigService,
-  private rabbitmq: RabbitmqService,
-) {}
+    private prisma: PrismaService,
+    private configService: ConfigService,
+    private rabbitmq: RabbitmqService,
+  ) {}
 
   async create(dto: CreateTicketDto, userId: string) {
     const ticket = await this.prisma.ticket.create({
@@ -32,12 +28,7 @@ export class TicketsService {
     });
 
     await this.autoAssign(ticket.id);
-    await this.notifyUser(
-      userId,
-      'TICKET_CREATED',
-      `Votre ticket "${ticket.title}" a été créé`,
-      ticket.id,
-    );
+    await this.notifyUser(userId, 'TICKET_CREATED', `Votre ticket "${ticket.title}" a été créé`, ticket.id);
 
     return this.prisma.ticket.findUnique({ where: { id: ticket.id } });
   }
@@ -75,30 +66,29 @@ export class TicketsService {
   }
 
   async updateStatus(id: string, dto: UpdateTicketStatusDto) {
-  const ticket = await this.findTicketOrThrow(id);
+    const ticket = await this.findTicketOrThrow(id);
 
-  const data: any = { status: dto.status };
+    const data: any = { status: dto.status };
 
-  if (dto.status === 'RESOLVED' || dto.status === 'CLOSED') {
-    const resolutionMinutes = Math.round(
-      (Date.now() - ticket.createdAt.getTime()) / 60000,
-    );
-    data.resolutionTimeMinutes = resolutionMinutes;
+    if (dto.status === 'RESOLVED' || dto.status === 'CLOSED') {
+      const resolutionMinutes = Math.round(
+        (Date.now() - ticket.createdAt.getTime()) / 60000,
+      );
+      data.resolutionTimeMinutes = resolutionMinutes;
+    }
+
+    const updated = await this.prisma.ticket.update({ where: { id }, data });
+
+    await this.rabbitmq.publish('ticket.status_changed', {
+      userId: ticket.createdBy,
+      type: 'TICKET_STATUS_CHANGED',
+      message: `Le statut de votre ticket "${ticket.title}" est passé à ${dto.status}`,
+      relatedTicketId: id,
+    });
+
+    return updated;
   }
 
-  const updated = await this.prisma.ticket.update({ where: { id }, data });
-
-  await this.rabbitmq.publish('ticket.status_changed', {
-    userId: ticket.createdBy,
-    type: 'TICKET_STATUS_CHANGED',
-    message: `Le statut de votre ticket "${ticket.title}" est passé à ${dto.status}`,
-    relatedTicketId: id,
-  });
-
-  return updated;
-}
-
-  // Réassignation MANUELLE (déclenchée par un Admin/Technicien depuis le frontend)
   async assign(id: string, dto: AssignTicketDto) {
     await this.findTicketOrThrow(id);
 
@@ -120,19 +110,23 @@ export class TicketsService {
     });
   }
 
-  // Affectation AUTOMATIQUE (déclenchée à la création d'un ticket)
-  // Stratégie : on choisit le technicien ayant le moins de tickets OPEN/IN_PROGRESS en cours.
+  async addAttachment(ticketId: string, fileUrl: string, fileName: string, uploadedBy: string) {
+    await this.findTicketOrThrow(ticketId);
+
+    return this.prisma.attachment.create({
+      data: { ticketId, fileUrl, fileName, uploadedBy },
+    });
+  }
+
   private async autoAssign(ticketId: string) {
     try {
       const authUrl = this.configService.get<string>('AUTH_SERVICE_URL');
-      const { data: technicians } = await axios.get<
-        { id: string; email: string }[]
-      >(`${authUrl}/auth/internal/technicians`);
+      const { data: technicians } = await axios.get<{ id: string; email: string }[]>(
+        `${authUrl}/auth/internal/technicians`,
+      );
 
       if (!technicians || technicians.length === 0) {
-        console.warn(
-          'Aucun technicien disponible pour l affectation automatique',
-        );
+        console.warn('Aucun technicien disponible pour l affectation automatique');
         return;
       }
 
@@ -157,19 +151,18 @@ export class TicketsService {
         data: { assignedTo: leastLoaded.technicianId },
       });
     } catch (error) {
-      // Comme pour les notifications : l'auto-affectation ne doit jamais bloquer la création du ticket
       console.error('Échec de l affectation automatique:', error.message);
     }
   }
 
   private async notifyUser(userId: string, type: string, message: string, relatedTicketId: string) {
-  await this.rabbitmq.publish('ticket.created', {
-    userId,
-    type,
-    message,
-    relatedTicketId,
-  });
-}
+    await this.rabbitmq.publish('ticket.created', {
+      userId,
+      type,
+      message,
+      relatedTicketId,
+    });
+  }
 
   private async findTicketOrThrow(id: string) {
     const ticket = await this.prisma.ticket.findUnique({ where: { id } });

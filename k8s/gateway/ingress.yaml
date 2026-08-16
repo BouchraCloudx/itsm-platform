@@ -51,3 +51,10 @@ spec:
                 name: frontend
                 port:
                   number: 80
+          - path: /api/files
+            pathType: Prefix
+            backend:
+              service:
+                name: file-service
+                port:
+                  number: 3005

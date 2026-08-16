@@ -21,13 +21,24 @@ export interface Ticket {
   resolutionTimeMinutes: number | null;
   createdAt: string;
   comments?: Comment[];
+  attachments?: Attachment[];
 }
+
 
 export interface Comment {
   id: string;
   ticketId: string;
   authorId: string;
   content: string;
+  createdAt: string;
+}
+
+export interface Attachment {
+  id: string;
+  ticketId: string;
+  fileUrl: string;
+  fileName: string;
+  uploadedBy: string;
   createdAt: string;
 }
 

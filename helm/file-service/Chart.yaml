@@ -1,0 +1,6 @@
+apiVersion: v2
+name: file-service
+description: Helm chart pour le microservice File (upload/download pièces jointes via MinIO)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

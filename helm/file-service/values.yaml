@@ -1,0 +1,31 @@
+replicaCount: 1
+
+image:
+  repository: itsm-platform-file-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3005
+
+env:
+  PORT: "3005"
+  MINIO_ENDPOINT: "http://minio:9000"
+  MINIO_ACCESS_KEY: "itsm_minio"
+  MINIO_SECRET_KEY: "itsm_minio_pass"
+  MINIO_BUCKET: "ticket-attachments"
+
+jwtSecretName: jwt-secret
+jwtSecretKey: JWT_SECRET
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+healthCheck:
+  path: /health
+  port: 3005

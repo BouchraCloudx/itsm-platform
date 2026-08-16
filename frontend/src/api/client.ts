@@ -1,11 +1,10 @@
 import axios from 'axios';
 
-// En dev local, chaque service tourne sur un port différent.
-// Plus tard (Kubernetes + Ingress), on passera tout par une seule URL de Gateway.
 const AUTH_URL = import.meta.env.VITE_AUTH_URL || '/api';
 const TICKET_URL = import.meta.env.VITE_TICKET_URL || '/api';
 const USER_URL = import.meta.env.VITE_USER_URL || '/api';
 const NOTIFICATION_URL = import.meta.env.VITE_NOTIFICATION_URL || '/api';
+const FILE_URL = import.meta.env.VITE_FILE_URL || '/api';
 
 function createClient(baseURL: string) {
   const client = axios.create({ baseURL });
@@ -36,3 +35,4 @@ export const authApi = createClient(AUTH_URL);
 export const ticketApi = createClient(TICKET_URL);
 export const userApi = createClient(USER_URL);
 export const notificationApi = createClient(NOTIFICATION_URL);
+export const fileApi = createClient(FILE_URL);
