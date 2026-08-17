@@ -44,6 +44,13 @@ spec:
                 name: notification-service
                 port:
                   number: 3004
+          - path: /api/reports
+            pathType: Prefix
+            backend:
+              service:
+                name: reporting-service
+                port:
+                  number: 3006
           - path: /
             pathType: Prefix
             backend:

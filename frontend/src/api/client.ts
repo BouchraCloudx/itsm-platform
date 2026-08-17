@@ -5,6 +5,7 @@ const TICKET_URL = import.meta.env.VITE_TICKET_URL || '/api';
 const USER_URL = import.meta.env.VITE_USER_URL || '/api';
 const NOTIFICATION_URL = import.meta.env.VITE_NOTIFICATION_URL || '/api';
 const FILE_URL = import.meta.env.VITE_FILE_URL || '/api';
+const REPORT_URL = import.meta.env.VITE_REPORT_URL || '/api';
 
 function createClient(baseURL: string) {
   const client = axios.create({ baseURL });
@@ -36,3 +37,4 @@ export const ticketApi = createClient(TICKET_URL);
 export const userApi = createClient(USER_URL);
 export const notificationApi = createClient(NOTIFICATION_URL);
 export const fileApi = createClient(FILE_URL);
+export const reportApi = createClient(REPORT_URL);

@@ -1,0 +1,28 @@
+replicaCount: 1
+
+image:
+  repository: itsm-platform-reporting-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3006
+
+env:
+  PORT: "3006"
+  TICKET_SERVICE_URL: "http://ticket-service:3002"
+
+jwtSecretName: jwt-secret
+jwtSecretKey: JWT_SECRET
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+healthCheck:
+  path: /health
+  port: 3006

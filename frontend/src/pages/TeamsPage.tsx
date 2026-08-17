@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { userApi } from '../api/client';
+import { userApi, reportApi } from '../api/client';
 import type { Team } from '../types';
 
 export default function TeamsPage() {
@@ -39,9 +39,26 @@ export default function TeamsPage() {
     loadTeams();
   }
 
+  async function handleDownloadReport() {
+    const response = await reportApi.get('/reports/pdf', { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'rapport-itsm.pdf';
+    link.click();
+  }
+
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-xl font-semibold text-slate-900 mb-6">Gestion des équipes</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-semibold text-slate-900">Gestion des équipes</h1>
+        <button
+          onClick={handleDownloadReport}
+          className="bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-slate-800"
+        >
+          📄 Télécharger le rapport PDF
+        </button>
+      </div>
 
       <form onSubmit={handleCreate} className="bg-white border border-slate-200 rounded-lg p-6 mb-6 flex gap-3 items-end">
         <div className="flex-1">
